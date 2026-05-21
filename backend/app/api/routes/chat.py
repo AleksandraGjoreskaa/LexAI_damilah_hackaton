@@ -1,6 +1,8 @@
 import logging
+import json
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from app.models.schemas import ChatRequest, ChatResponse, SourceReference
 from app.services.vector_store import VectorStoreService
@@ -60,4 +62,39 @@ async def ask_question(request: ChatRequest):
         answer=result["answer"],
         sources=[SourceReference(**s) for s in result["sources"]],
         confidence=result["confidence"],
+    )
+
+
+@router.post("/ask/stream")
+async def ask_question_stream(request: ChatRequest):
+    """
+    Streaming version of ask. Returns Server-Sent Events with:
+    - type: "sources" (first event with metadata)
+    - type: "token" (each text chunk)
+    - type: "done" (signals completion)
+    """
+    if not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    llm_service = get_llm_service()
+
+    def event_generator():
+        try:
+            for event in llm_service.ask_stream(
+                question=request.question,
+                top_k=request.top_k,
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"Streaming LLM error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

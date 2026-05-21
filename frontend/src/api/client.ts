@@ -48,6 +48,55 @@ export async function askQuestion(question: string): Promise<ChatResponse> {
   return res.json();
 }
 
+export interface StreamEvent {
+  type: 'sources' | 'token' | 'done' | 'error';
+  content?: string;
+  sources?: SourceReference[];
+  confidence?: number;
+}
+
+export async function askQuestionStream(
+  question: string,
+  onEvent: (event: StreamEvent) => void
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/chat/ask/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Грешка при комуникација со серверот' }));
+    throw new Error(err.detail || `HTTP ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const event: StreamEvent = JSON.parse(line.slice(6));
+          onEvent(event);
+        } catch {
+          // ignore malformed events
+        }
+      }
+    }
+  }
+}
+
 export async function uploadDocument(file: File): Promise<Document> {
   const formData = new FormData();
   formData.append('file', file);

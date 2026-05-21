@@ -113,3 +113,75 @@ class LLMService:
             "sources": sources,
             "confidence": confidence,
         }
+
+    def ask_stream(self, question: str, top_k: int = 5):
+        """
+        Streaming RAG pipeline - yields chunks as they arrive.
+        First yields sources/metadata as JSON, then streams answer tokens.
+        """
+        search_results = self.vector_store.search(query=question, top_k=top_k)
+
+        if not search_results:
+            yield {
+                "type": "sources",
+                "sources": [],
+                "confidence": 0.0,
+            }
+            yield {
+                "type": "token",
+                "content": "Не можам да најдам одговор на ова прашање. Нема поставено документи во системот.",
+            }
+            yield {"type": "done"}
+            return
+
+        context = self._build_context(search_results)
+
+        avg_score = sum(r["score"] for r in search_results) / len(search_results)
+        confidence = min(avg_score, 1.0)
+
+        sources = [
+            {
+                "filename": r["source_filename"],
+                "page_number": r.get("page_number"),
+                "relevance_score": r["score"],
+                "snippet": r["content"][:200] + "..." if len(r["content"]) > 200 else r["content"],
+            }
+            for r in search_results
+        ]
+
+        # Yield sources first so frontend can display them immediately
+        yield {
+            "type": "sources",
+            "sources": sources,
+            "confidence": confidence,
+        }
+
+        user_prompt = f"""Контекст од македонски закони:
+
+{context}
+
+---
+
+Прашање: {question}
+
+Одговори базирано на горниот контекст:"""
+
+        stream = self.client.chat.completions.create(
+            model=settings.LLM_MODEL,
+            temperature=settings.LLM_TEMPERATURE,
+            max_tokens=settings.LLM_MAX_TOKENS,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+            ],
+            stream=True,
+        )
+
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                yield {
+                    "type": "token",
+                    "content": chunk.choices[0].delta.content,
+                }
+
+        yield {"type": "done"}

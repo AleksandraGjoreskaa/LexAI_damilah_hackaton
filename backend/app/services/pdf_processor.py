@@ -1,3 +1,5 @@
+import re
+
 import pdfplumber
 from pathlib import Path
 
@@ -44,6 +46,7 @@ class PDFProcessor:
         """
         Split extracted pages into smaller chunks using LangChain's RecursiveCharacterTextSplitter.
         Each chunk carries metadata about source file and page number.
+        Filters out garbled/unreadable chunks (broken PDF font encoding).
         """
         documents = []
 
@@ -55,9 +58,26 @@ class PDFProcessor:
                     "page_number": page_data["page_number"],
                 }],
             )
-            documents.extend(page_docs)
+            # Filter out garbled chunks
+            for doc in page_docs:
+                if not self._is_garbled(doc.page_content):
+                    documents.append(doc)
 
         return documents
+
+    @staticmethod
+    def _is_garbled(text: str) -> bool:
+        """Detect garbled text from PDFs with broken font encoding."""
+        if len(text) < 50:
+            return False
+        cyrillic = len(re.findall(r'[\u0400-\u04FF]', text))
+        alpha = len(re.findall(r'[a-zA-Z\u0400-\u04FF]', text))
+        if alpha == 0:
+            return True
+        cyrillic_ratio = cyrillic / alpha
+        bracket_chars = len(re.findall(r'[\[\]<>{}|◊©®™\xad]', text))
+        bracket_ratio = bracket_chars / len(text)
+        return cyrillic_ratio < 0.30 or bracket_ratio > 0.05
 
     def process_pdf(self, file_path: str, filename: str) -> tuple[list[Document], int]:
         """
