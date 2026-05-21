@@ -1,0 +1,36 @@
+# FastAPI & Server
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.35
+aiosqlite==0.20.0
+greenlet>=3.0.0
+
+# PDF Processing
+pdfplumber==0.11.4
+
+# LangChain & Embeddings (latest compatible ecosystem)
+langchain>=1.3.0
+langchain-community>=0.4.0
+langchain-huggingface>=0.1.2
+langchain-chroma>=1.1.0
+langchain-core>=1.4.0
+langchain-text-splitters>=0.3.8
+
+# Vector Store
+chromadb>=1.3.5
+
+# Embeddings Model
+sentence-transformers>=3.3.0
+torch>=2.6.0
+
+# Utilities
+python-dotenv==1.0.1
+pydantic-settings>=2.5.2
+
+# LLM - OpenAI compatible
+openai>=1.0.0
+
+
