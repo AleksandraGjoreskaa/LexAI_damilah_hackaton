@@ -49,10 +49,11 @@ export async function askQuestion(question: string): Promise<ChatResponse> {
 }
 
 export interface StreamEvent {
-  type: 'sources' | 'token' | 'done' | 'error';
+  type: 'sources' | 'token' | 'done' | 'error' | 'followups';
   content?: string;
   sources?: SourceReference[];
   confidence?: number;
+  questions?: string[];
 }
 
 export async function askQuestionStream(

@@ -184,4 +184,36 @@ class LLMService:
                     "content": chunk.choices[0].delta.content,
                 }
 
+        # Generate follow-up questions
+        followups = self._generate_followups(question, context)
+        yield {"type": "followups", "questions": followups}
+
         yield {"type": "done"}
+
+    def _generate_followups(self, question: str, context: str) -> list[str]:
+        """Generate 2-3 suggested follow-up questions based on the conversation."""
+        try:
+            response = self.client.chat.completions.create(
+                model=settings.LLM_MODEL,
+                temperature=0.7,
+                max_tokens=200,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "Генерирај точно 3 кратки follow-up прашања на македонски јазик "
+                            "кои корисникот би можел да ги постави следно, базирано на контекстот и прашањето. "
+                            "Одговори САМО со 3 прашања, секое на нов ред. Без нумерирање, без додатен текст."
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Корисникот праша: {question}\n\nКонтекст: {context[:500]}",
+                    },
+                ],
+            )
+            text = response.choices[0].message.content.strip()
+            questions = [q.strip().lstrip("0123456789.-) ") for q in text.split("\n") if q.strip()]
+            return questions[:3]
+        except Exception:
+            return []

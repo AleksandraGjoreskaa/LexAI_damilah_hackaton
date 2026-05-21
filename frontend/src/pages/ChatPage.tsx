@@ -11,6 +11,7 @@ interface Message {
   sources?: SourceReference[];
   confidence?: number;
   isStreaming?: boolean;
+  followups?: string[];
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -121,6 +122,15 @@ export function ChatPage() {
               )
             );
             break;
+          case 'followups':
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantId
+                  ? { ...m, followups: event.questions }
+                  : m
+              )
+            );
+            break;
           case 'error':
             setMessages((prev) =>
               prev.map((m) =>
@@ -205,6 +215,20 @@ export function ChatPage() {
                           <SourcesPanel sources={msg.sources} confidence={msg.confidence} />
                         )}
                       </div>
+                      {/* Follow-up suggestions */}
+                      {msg.followups && msg.followups.length > 0 && !isLoading && (
+                        <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
+                          {msg.followups.map((q, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handleSuggestion(q)}
+                              className="text-xs px-3 py-1.5 rounded-lg border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100 hover:border-primary-300 transition-all duration-150"
+                            >
+                              {q}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
