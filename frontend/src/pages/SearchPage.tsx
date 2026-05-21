@@ -46,12 +46,12 @@ export function SearchPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Header with search */}
-      <header className="px-6 py-5 bg-white border-b border-gray-200">
+      <header className="px-6 py-5 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-xl font-bold text-gray-900">Пребарување закони</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Директно пребарување на правната база</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">Пребарување закони</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Директно пребарување на правната база</p>
 
           <form onSubmit={handleSearch} className="mt-4">
             <div className="flex gap-3">
@@ -62,7 +62,7 @@ export function SearchPage() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Пребарајте поим, член, или правна тема..."
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 focus:bg-white transition-all placeholder:text-gray-400"
+                  className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-600 transition-all placeholder:text-gray-400"
                 />
               </div>
               <button
@@ -110,7 +110,7 @@ export function SearchPage() {
               {results.map((result, i) => (
                 <div
                   key={i}
-                  className="bg-white rounded-xl border border-gray-100 px-5 py-4 hover:border-gray-200 hover:shadow-sm transition-all duration-150"
+                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 px-5 py-4 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all duration-150"
                 >
                   {/* Header */}
                   <div className="flex items-center gap-3 mb-2">
@@ -118,7 +118,7 @@ export function SearchPage() {
                       <FileText className="h-4 w-4 text-red-500" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                         {result.source_filename}
                       </p>
                       {result.page_number && (
@@ -136,7 +136,7 @@ export function SearchPage() {
                   </div>
 
                   {/* Content */}
-                  <div className="text-sm text-gray-700 leading-relaxed pl-11">
+                  <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed pl-11">
                     {highlightText(result.content, query)}
                   </div>
                 </div>

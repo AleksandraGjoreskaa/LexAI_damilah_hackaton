@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Scale, ChevronDown, ChevronUp, Sparkles, BookOpen, Gavel, FileText } from 'lucide-react';
+import { Send, Loader2, Scale, ChevronDown, ChevronUp, Sparkles, BookOpen, Gavel, FileText, Copy, Check, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import html2pdf from 'html2pdf.js';
 import { askQuestionStream, type ChatResponse, type SourceReference } from '@/api/client';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,78 @@ const SUGGESTED_QUESTIONS = [
   { icon: FileText, text: 'Што предвидува Законот за парнична постапка?' },
   { icon: Scale, text: 'Кои се основните права на работниците?' },
 ];
+
+function formatForClipboard(msg: Message): string {
+  let text = msg.content;
+  if (msg.sources && msg.sources.length > 0) {
+    text += '\n\n---\nИзвори:\n';
+    msg.sources.forEach((s) => {
+      text += `• ${s.filename}`;
+      if (s.page_number) text += ` (стр. ${s.page_number})`;
+      text += '\n';
+    });
+  }
+  text += '\n— Генерирано од LexAI';
+  return text;
+}
+
+function exportAsPdf(msg: Message, question: string) {
+  const container = document.createElement('div');
+  container.innerHTML = `
+    <div style="font-family: 'Segoe UI', sans-serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #1a1a2e; line-height: 1.6;">
+      <h1 style="font-size: 18px; color: #4338ca; border-bottom: 2px solid #e0e7ff; padding-bottom: 8px;">⚖️ LexAI — Правно мислење</h1>
+      <div style="background: #f5f3ff; padding: 12px 16px; border-radius: 8px; margin: 16px 0; font-style: italic;"><strong>Прашање:</strong> ${question}</div>
+      <div style="margin: 16px 0;">${msg.content.replace(/\n/g, '<br>')}</div>
+      ${msg.sources && msg.sources.length > 0 ? `
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+        <h3 style="font-size: 13px; color: #6b7280; margin-bottom: 8px;">Извори:</h3>
+        ${msg.sources.map(s => `<div style="font-size: 12px; color: #4b5563; padding: 4px 0;">• ${s.filename}${s.page_number ? ` (стр. ${s.page_number})` : ''}</div>`).join('')}
+      </div>` : ''}
+      <div style="margin-top: 32px; font-size: 11px; color: #9ca3af; text-align: center;">Генерирано од LexAI • ${new Date().toLocaleDateString('mk-MK')}</div>
+    </div>`;
+
+  html2pdf()
+    .set({
+      margin: [10, 10, 10, 10],
+      filename: `LexAI-${new Date().toISOString().slice(0, 10)}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    })
+    .from(container)
+    .save();
+}
+
+function MessageActions({ msg, question }: { msg: Message; question: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(formatForClipboard(msg));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="flex items-center gap-1 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button
+        onClick={handleCopy}
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        title="Копирај"
+      >
+        {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+        {copied ? 'Копирано' : 'Копирај'}
+      </button>
+      <button
+        onClick={() => exportAsPdf(msg, question)}
+        className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        title="Извези PDF"
+      >
+        <Download className="h-3 w-3" />
+        PDF
+      </button>
+    </div>
+  );
+}
 
 function SourcesPanel({ sources, confidence }: { sources: ChatResponse['sources']; confidence?: number }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -165,7 +238,7 @@ export function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         {messages.length === 0 ? (
@@ -173,7 +246,7 @@ export function ChatPage() {
             <div className="w-16 h-16 rounded-2xl bg-primary-100 flex items-center justify-center mb-6">
               <Sparkles className="h-8 w-8 text-primary-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Правен AI Асистент</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Правен AI Асистент</h2>
             <p className="text-sm text-gray-500 text-center max-w-md mb-8">
               Поставете прашање за македонските закони. Одговорите се базирани на 30 закони
               вчитани од Министерство за правда.
@@ -193,7 +266,7 @@ export function ChatPage() {
           </div>
         ) : (
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-            {messages.map((msg) => (
+            {messages.map((msg, idx) => (
               <div key={msg.id} className="animate-slide-up">
                 {msg.role === 'user' ? (
                   <div className="flex justify-end">
@@ -202,19 +275,26 @@ export function ChatPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-3">
+                  <div className="flex gap-3 group">
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center">
                       <Scale className="h-4 w-4 text-primary-700" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-gray-100">
-                        <div className="prose prose-sm prose-gray max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_strong]:text-gray-900 [&_li]:text-gray-700">
+                        <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-gray-100 dark:border-gray-700">
+                        <div className="prose prose-sm prose-gray dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:mb-2 [&>ol]:mb-2 [&>h1]:text-base [&>h2]:text-sm [&>h3]:text-sm [&_strong]:text-gray-900 dark:[&_strong]:text-gray-100 [&_li]:text-gray-700 dark:[&_li]:text-gray-300">
                           <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                         {msg.sources && msg.sources.length > 0 && (
                           <SourcesPanel sources={msg.sources} confidence={msg.confidence} />
                         )}
                       </div>
+                      {/* Action buttons (copy/export) */}
+                      {!msg.isStreaming && msg.content && (
+                        <MessageActions
+                          msg={msg}
+                          question={messages[idx - 1]?.content || ''}
+                        />
+                      )}
                       {/* Follow-up suggestions */}
                       {msg.followups && msg.followups.length > 0 && !isLoading && (
                         <div className="mt-2 flex flex-wrap gap-2 animate-fade-in">
@@ -258,7 +338,7 @@ export function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 bg-white px-4 py-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-4">
         <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
           <div className="flex gap-3 items-center">
             <div className="flex-1 relative">
@@ -268,7 +348,7 @@ export function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Поставете правно прашање..."
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 focus:bg-white transition-all placeholder:text-gray-400"
+                className="w-full rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 dark:text-white px-4 py-3 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-400 focus:bg-white dark:focus:bg-gray-600 transition-all placeholder:text-gray-400"
                 disabled={isLoading}
               />
             </div>

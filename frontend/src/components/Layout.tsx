@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessageSquare, FileText, Scale, Menu, X, Database, Search } from 'lucide-react';
+import { MessageSquare, FileText, Scale, Menu, X, Database, Search, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/hooks/useTheme';
 
 const navItems = [
   { to: '/', label: 'Разговор', icon: MessageSquare, description: 'AI правен асистент' },
@@ -12,9 +13,10 @@ const navItems = [
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { dark, toggle } = useTheme();
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -72,6 +74,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             })}
           </nav>
 
+          {/* Theme toggle */}
+          <div className="px-4 mb-2">
+            <button
+              onClick={toggle}
+              className="flex items-center gap-2 w-full px-4 py-2.5 rounded-xl text-sm text-primary-200 hover:bg-white/5 hover:text-white transition-all duration-150"
+            >
+              {dark ? <Sun className="h-4 w-4 text-accent-400" /> : <Moon className="h-4 w-4" />}
+              <span>{dark ? 'Светла тема' : 'Темна тема'}</span>
+            </button>
+          </div>
+
           {/* Footer stats */}
           <div className="p-4 mx-4 mb-4 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2 text-xs text-primary-300">
@@ -88,7 +101,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200">
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
