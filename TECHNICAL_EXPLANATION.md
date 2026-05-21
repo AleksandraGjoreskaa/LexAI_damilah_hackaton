@@ -226,14 +226,20 @@ The frontend reads these events and appends each token to the display — creati
 ### Step 8: The Frontend (React + TypeScript)
 
 **Pages:**
-- `ChatPage.tsx` — Chat interface with streaming, markdown rendering, collapsible sources
+- `ChatPage.tsx` — Chat interface with streaming, markdown rendering, collapsible sources, follow-up questions, copy/export buttons
 - `SearchPage.tsx` — Direct semantic search with text highlighting
 - `DocumentsPage.tsx` — Upload/manage PDFs with stats
 
 **Key libraries:**
 - `react-markdown` — renders **bold**, lists, headers from LLM output
+- `html2pdf.js` — generates downloadable PDF files from answers
 - `lucide-react` — icons
-- `tailwindcss` — utility-first CSS (no writing custom CSS files)
+- `tailwindcss` — utility-first CSS with dark mode support (class strategy)
+
+**UX Features:**
+- **Dark mode** — Toggle in sidebar, persisted in localStorage, applied via Tailwind `dark:` variants
+- **Share/Export** — Each assistant message has Copy (clipboard) and Download PDF buttons (appear on hover)
+- **Follow-up questions** — AI suggests 3 related questions after each answer
 
 ---
 
